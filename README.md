@@ -41,17 +41,98 @@
 
 ### 1. Cloner le repository
 
-```bash
-git clone https://github.com/votre-username/crypto-trader-minitel.git
-cd crypto-trader-minitel
+    git clone https://github.com/votre-username/crypto-trader-minitel.git
+    cd crypto-trader-minitel```
 
+### 2. Créer un environnement virtuel
 
-
-# Créer un environnement virtuel
-
-   python3 -m venv venv
-   source venv/bin/activate  # Linux/Mac
+    python3 -m venv venv
+    source venv/bin/activate  # Linux/Mac
 
 # ou
 
-   venv\Scripts\activate     # Windows
+    venv\Scripts\activate     # Windows
+
+### 3. Installer les dépendances
+
+    pip install -r requirements.txt
+
+### 4. Installer les dépendances frontend (npm)
+
+    npm install
+
+
+### 5. Copier Chart.js dans le dossier static
+
+# Automatique avec npm install
+# Sinon manuellement :
+    cp node_modules/chart.js/dist/chart.umd.min.js static/js/
+ 
+### 6. Lancer l'application
+
+    python3 serv_crypto.py
+
+### 7. Ouvrir dans le navigateur
+
+    http://localhost:5002
+
+# Installation rapide
+
+    # Cloner
+    git clone https://github.com/votre-username/crypto-trader-minitel.git
+    cd crypto-trader-minitel
+
+    # Installation automatique
+    python3 setup.py
+
+ou
+    
+    python setup.bat
+    
+    
+# Ou manuelle
+    
+    pip install -r requirements.txt
+    npm install chart.js
+    cp node_modules/chart.js/dist/chart.umd.min.js static/js/
+
+# Lancer
+    
+    python3 serv_crypto.py
+
+
+📊 API Endpoints
+Endpoint	Description
+/api/trading/<symbol>	Données de trading (chandeliers)
+/api/watchlist	Liste de suivi
+/api/top-performers	Meilleures performances
+/api/insights-advanced/<symbol>	Prédictions IA
+/api/clear-cache	Vider le cache
+
+
+🗂️ Structure du projet
+
+    crypto-trader-minitel/
+    ├── README.md
+    ├── requirements.txt
+    ├── serv_crypto.py          # Serveur Flask
+    ├── templates/
+    │   └── index_crypto.html   # Interface HTML
+    └── static/
+    └── js/
+        └── chart.umd.min.js # Chart.js
+
+🔧 Technologies utilisées
+
+    Backend : Python / Flask
+
+    Frontend : HTML / CSS (Style Minitel)
+
+    API : CoinGecko (données réelles)
+
+    Graphiques : Chart.js
+
+    Cache : Mémoire interne (5 minutes)
+
+
+By Gleaphe 2026 
