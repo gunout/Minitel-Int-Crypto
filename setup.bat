@@ -12,5 +12,5 @@ mkdir static\js
 copy node_modules\chart.js\dist\chart.umd.min.js static\js\
 
 echo Installation terminée !
-echo Lancez l'application avec : python serv_crypto.py
+echo Lancez l'application avec : python serv.py
 pause
