@@ -1,0 +1,660 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CRYPTO TRADER - Minitel Style</title>
+
+    <!-- Chart.js uniquement (pas besoin du plugin financier) -->
+    <script src="/static/js/chart.umd.min.js"></script>
+
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=VT323&display=swap');
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background: #000; color: #33ff33;
+            font-family: 'VT323', 'Courier New', monospace;
+            min-height: 100vh; padding: 10px;
+        }
+        body::before {
+            content: ""; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: repeating-linear-gradient(0deg, rgba(0,0,0,0.15) 0px, rgba(0,0,0,0.15) 2px, transparent 2px, transparent 4px);
+            pointer-events: none; z-index: 9999;
+        }
+        body::after {
+            content: ""; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: radial-gradient(ellipse at center, rgba(0,255,0,0.03) 0%, transparent 70%);
+            pointer-events: none; z-index: 9998;
+        }
+        .container {
+            max-width: 1600px; margin: 0 auto; border: 2px solid #33ff33;
+            padding: 12px; background: #0a0a0a;
+            box-shadow: 0 0 30px rgba(51,255,51,0.05); position: relative;
+        }
+        @keyframes flicker { 0%{opacity:.97} 5%{opacity:1} 10%{opacity:.95} 15%{opacity:1} 100%{opacity:1} }
+        .container { animation: flicker 4s infinite; }
+        .minitel-header {
+            border-bottom: 2px solid #33ff33; padding-bottom: 8px; margin-bottom: 12px;
+            display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;
+        }
+        .minitel-title { font-size: 2rem; font-weight: bold; letter-spacing: 4px; text-shadow: 0 0 20px rgba(51,255,51,0.2); }
+        .minitel-title .blink { animation: blink 1s infinite; }
+        .minitel-title .crypto-color { color: #ffaa00; }
+        @keyframes blink { 0%,49%{opacity:1} 50%,100%{opacity:0} }
+        .minitel-status { font-size: 0.9rem; border: 1px solid #33ff33; padding: 4px 12px; background: rgba(51,255,51,0.05); }
+        .led { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; animation: pulse 1.5s infinite; }
+        .led-on { background: #33ff33; } .led-off { background: #ff3333; }
+        @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+        .header-badges { display: flex; gap: 6px; flex-wrap: wrap; }
+        .badge { padding: 2px 10px; border: 1px solid #33ff33; font-size: 0.7rem; background: rgba(51,255,51,0.05); }
+        .badge-btc { border-color: #ffaa00; color: #ffaa00; background: rgba(255,170,0,0.05); }
+        .badge-eth { border-color: #627eea; color: #627eea; background: rgba(98,126,234,0.05); }
+        .badge-sol { border-color: #9945ff; color: #9945ff; background: rgba(153,69,255,0.05); }
+        .badge-24-7 { border-color: #ff6b00; color: #ff6b00; background: rgba(255,107,0,0.05); animation: pulse-orange 2s infinite; }
+        @keyframes pulse-orange { 0%,100%{opacity:1} 50%{opacity:0.5} }
+        .minitel-timezone {
+            border: 1px solid #33ff33; padding: 6px 12px; margin-bottom: 12px;
+            display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 6px;
+            background: rgba(51,255,51,0.02); font-size: 0.8rem;
+        }
+        .timezone-item { display: flex; align-items: center; gap: 5px; }
+        .timezone-item .time { font-weight: bold; }
+        .market-status { padding: 2px 10px; border: 1px solid #33ff33; }
+        .market-open { background: rgba(51,255,51,0.05); }
+        .main-grid { display: grid; grid-template-columns: 2.5fr 1fr; gap: 12px; }
+        .card { border: 1px solid #33ff33; padding: 10px 12px; margin-bottom: 10px; background: rgba(51,255,51,0.02); }
+        .card-title {
+            font-size: 0.9rem; font-weight: bold; text-transform: uppercase; letter-spacing: 2px;
+            border-bottom: 1px solid #33ff33; padding-bottom: 4px; margin-bottom: 8px;
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .card-title .badge-count { font-size: 0.6rem; padding: 1px 8px; border: 1px solid #33ff33; }
+        .price-display { text-align: center; padding: 12px; border: 1px solid #33ff33; background: rgba(51,255,51,0.02); }
+        .price-display .symbol { font-size: 1rem; }
+        .price-display .symbol .exchange { font-size: 0.7rem; opacity: 0.6; }
+        .price-display .price { font-size: 3rem; font-weight: bold; text-shadow: 0 0 30px rgba(51,255,51,0.1); }
+        .price-display .change { font-size: 1.1rem; font-weight: bold; }
+        .change-positive { color: #33ff33; } .change-negative { color: #ff3333; }
+        .price-display .price-info { display: flex; justify-content: center; gap: 15px; margin-top: 6px; font-size: 0.8rem; opacity: 0.7; }
+        .price-display .price-info span { display: flex; align-items: center; gap: 4px; }
+        .metrics-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 8px; margin-top: 8px; }
+        .metric-card { border: 1px solid #33ff33; padding: 6px; text-align: center; background: rgba(51,255,51,0.02); }
+        .metric-card .label { font-size: 0.55rem; text-transform: uppercase; opacity: 0.6; letter-spacing: 1px; }
+        .metric-card .value { font-size: 1.1rem; font-weight: bold; margin-top: 2px; }
+        #chart-container { height: 420px; background: #0a0a0a; border: 1px solid #33ff33; position: relative; }
+        #candleChart { width: 100%; height: 100%; }
+        .chart-controls { display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 8px; }
+        .chart-controls .group { display: flex; gap: 2px; align-items: center; padding: 0 6px; border-right: 1px solid #33ff33; }
+        .chart-controls .group:last-child { border-right: none; }
+        .chart-controls .group-label { font-size: 0.55rem; text-transform: uppercase; opacity: 0.5; margin-right: 4px; white-space: nowrap; }
+        .chart-controls button {
+            background: transparent; border: 1px solid #33ff33; color: #33ff33;
+            padding: 2px 8px; font-family: 'VT323', monospace; font-size: 0.7rem;
+            cursor: pointer; transition: all 0.2s; white-space: nowrap;
+        }
+        .chart-controls button:hover { background: rgba(51,255,51,0.1); }
+        .chart-controls button.active { background: rgba(51,255,51,0.15); }
+        .indicators-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 6px; }
+        .indicator-box { border: 1px solid #33ff33; padding: 6px; text-align: center; background: rgba(51,255,51,0.02); }
+        .indicator-box .name { font-size: 0.55rem; text-transform: uppercase; opacity: 0.6; letter-spacing: 1px; }
+        .indicator-box .value { font-size: 1rem; font-weight: bold; }
+        .indicator-box .value.bullish { color: #33ff33; } .indicator-box .value.bearish { color: #ff3333; }
+        .indicator-box .value.neutral { color: #ffaa00; }
+        .ind-section-title {
+            font-size: 0.55rem; text-transform: uppercase; opacity: 0.4; letter-spacing: 2px;
+            grid-column: 1 / -1; padding-bottom: 2px; border-bottom: 1px solid rgba(51,255,51,0.15); margin-bottom: 2px;
+        }
+        .signal-box { padding: 6px 10px; border: 1px solid #33ff33; margin-bottom: 4px; display: flex; align-items: center; gap: 8px; background: rgba(51,255,51,0.02); }
+        .signal-buy { border-color: #33ff33; } .signal-sell { border-color: #ff3333; } .signal-warning { border-color: #ffaa00; }
+        .signal-box .signal-icon { font-size: 1rem; } .signal-box .signal-content { flex: 1; }
+        .signal-box .signal-content .signal-title { font-weight: bold; font-size: 0.8rem; }
+        .signal-box .signal-content .signal-text { font-size: 0.7rem; opacity: 0.7; }
+        .recommendation-box { padding: 10px; border: 2px solid #33ff33; text-align: center; margin-top: 8px; }
+        .recommendation-buy { border-color: #33ff33; background: rgba(51,255,51,0.05); }
+        .recommendation-sell { border-color: #ff3333; background: rgba(255,51,51,0.05); }
+        .recommendation-neutral { border-color: #ffaa00; background: rgba(255,170,0,0.05); }
+        .recommendation-box .rec-title { font-size: 1.5rem; font-weight: bold; }
+        .recommendation-box .rec-confidence { font-size: 0.8rem; opacity: 0.7; }
+        .watchlist-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; max-height: 200px; overflow-y: auto; }
+        .watchlist-grid::-webkit-scrollbar { width: 4px; }
+        .watchlist-grid::-webkit-scrollbar-track { background: #0a0a0a; }
+        .watchlist-grid::-webkit-scrollbar-thumb { background: #33ff33; }
+        .watchlist-item {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 4px 8px; border: 1px solid #33ff33; cursor: pointer;
+            transition: all 0.2s; background: rgba(51,255,51,0.02);
+        }
+        .watchlist-item:hover { background: rgba(51,255,51,0.08); }
+        .watchlist-item .symbol { font-weight: bold; font-size: 0.75rem; }
+        .watchlist-item .price { font-size: 0.8rem; }
+        .watchlist-item .change-small { font-size: 0.65rem; font-weight: bold; }
+        .watchlist-item.btc-item { border-color: #ffaa00; background: rgba(255,170,0,0.05); }
+        .watchlist-item.btc-item:hover { background: rgba(255,170,0,0.15); }
+        .input-group { display: flex; gap: 6px; margin: 6px 0; }
+        .input-group input {
+            flex: 1; background: transparent; border: 1px solid #33ff33; color: #33ff33;
+            padding: 4px 8px; font-family: 'VT323', monospace; font-size: 0.9rem;
+        }
+        .input-group input:focus { outline: none; background: rgba(51,255,51,0.05); }
+        .input-group input::placeholder { color: #33ff33; opacity: 0.3; }
+        .btn {
+            background: transparent; border: 1px solid #33ff33; color: #33ff33;
+            padding: 4px 12px; font-family: 'VT323', monospace; font-size: 0.8rem;
+            cursor: pointer; transition: all 0.2s;
+        }
+        .btn:hover { background: rgba(51,255,51,0.1); }
+        .btn-primary { background: rgba(51,255,51,0.05); }
+        .btn-sm { padding: 2px 8px; font-size: 0.65rem; }
+        .btn-btc { border-color: #ffaa00; color: #ffaa00; }
+        .btn-btc:hover { background: rgba(255,170,0,0.15); }
+        .quick-buttons { display: flex; gap: 3px; margin-top: 4px; flex-wrap: wrap; }
+        .quick-buttons .btn { padding: 2px 8px; font-size: 0.6rem; }
+        .prediction-grid { display: grid; grid-template-columns: repeat(5,1fr); gap: 4px; margin-top: 6px; }
+        .prediction-item { text-align: center; padding: 4px; border: 1px solid #33ff33; background: rgba(51,255,51,0.02); }
+        .prediction-item .day { font-size: 0.5rem; text-transform: uppercase; opacity: 0.6; letter-spacing: 1px; }
+        .prediction-item .price { font-weight: bold; font-size: 0.8rem; }
+        .prediction-item .change-pred { font-size: 0.6rem; }
+        .spinner {
+            border: 2px solid #33ff33; border-top: 2px solid transparent; border-radius: 50%;
+            width: 20px; height: 20px; animation: spin 0.8s linear infinite; margin: 10px auto;
+        }
+        @keyframes spin { 0%{transform:rotate(0deg)} 100%{transform:rotate(360deg)} }
+        .chart-error {
+            display: flex; align-items: center; justify-content: center; height: 100%;
+            color: #ff3333; font-size: 1rem; text-align: center; padding: 20px;
+        }
+        .footer { border-top: 2px solid #33ff33; padding-top: 8px; margin-top: 12px; text-align: center; font-size: 0.7rem; opacity: 0.6; }
+        .footer .links { display: flex; justify-content: center; gap: 12px; margin-top: 4px; flex-wrap: wrap; }
+        .footer .links a { color: #33ff33; text-decoration: none; border-bottom: 1px dotted #33ff33; }
+        .footer .links a:hover { opacity: 0.7; }
+        .footer .crypto-footer { color: #ffaa00; }
+        @media (max-width: 1200px) { .main-grid { grid-template-columns: 1fr; } }
+        @media (max-width: 768px) {
+            .minitel-title { font-size: 1.5rem; }
+            .metrics-grid { grid-template-columns: repeat(2,1fr); }
+            .watchlist-grid { grid-template-columns: 1fr; }
+            .indicators-grid { grid-template-columns: 1fr 1fr; }
+            .price-display .price { font-size: 2.2rem; }
+            .prediction-grid { grid-template-columns: repeat(3,1fr); }
+            #chart-container { height: 300px; }
+            .minitel-header { flex-direction: column; align-items: flex-start; }
+        }
+        @media (max-width: 480px) {
+            body { padding: 5px; } .container { padding: 8px; }
+            .metrics-grid, .indicators-grid { grid-template-columns: 1fr; }
+            .prediction-grid { grid-template-columns: repeat(2,1fr); }
+            .price-display .price { font-size: 1.8rem; }
+            .price-display .price-info { flex-direction: column; gap: 2px; }
+            #chart-container { height: 250px; }
+            .chart-controls .group { border-right: none; flex-wrap: wrap; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="minitel-header">
+            <div>
+                <div class="minitel-title"><i class="fas fa-terminal"></i> CRYPTO TRADER <span class="blink">&#9608;</span></div>
+                <div style="font-size:0.6rem;opacity:0.4;letter-spacing:2px;">
+                    <i class="fas fa-satellite-dish"></i> 24/7 &#8226; BITCOIN / ETHEREUM / ALTCOINS
+                    <span style="color:#ffaa00;">&#128184; CRYPTO</span>
+                </div>
+            </div>
+            <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+                <div class="header-badges">
+                    <span class="badge badge-btc">&#8383; BITCOIN</span>
+                    <span class="badge badge-eth">ETHEREUM</span>
+                    <span class="badge badge-sol">SOLANA</span>
+                    <span class="badge badge-24-7">24/7</span>
+                    <span class="badge">LIVE</span>
+                </div>
+                <div class="minitel-status"><span class="led led-on" id="status-led"></span><span id="status-text">CONNEXION</span></div>
+            </div>
+        </div>
+
+        <div class="minitel-timezone">
+            <div class="timezone-item">&#127482;&#127480; NY: <span class="time" id="ny-time">--:--:--</span></div>
+            <div class="timezone-item">&#127467;&#127479; PARIS: <span class="time" id="paris-time">--:--:--</span></div>
+            <div class="timezone-item">&#127468;&#127463; LONDRES: <span class="time" id="london-time">--:--:--</span></div>
+            <div class="timezone-item">&#127471;&#127477; TOKYO: <span class="time" id="tokyo-time">--:--:--</span></div>
+            <div><span class="market-status market-open" id="market-status"><i class="fas fa-circle"></i> 24/7 OUVERT</span></div>
+        </div>
+
+        <div class="main-grid">
+            <div>
+                <div class="card">
+                    <div class="price-display" id="price-display">
+                        <div class="symbol"><span id="current-symbol">BTC-USD</span> <span class="exchange" id="current-exchange">CRYPTO</span></div>
+                        <div class="price" id="current-price">--</div>
+                        <div class="change" id="current-change"><span>CHARGEMENT...</span></div>
+                        <div class="price-info">
+                            <span><i class="fas fa-arrow-up" style="color:#33ff33;"></i> HAUT: <strong id="day-high">--</strong></span>
+                            <span><i class="fas fa-arrow-down" style="color:#ff3333;"></i> BAS: <strong id="day-low">--</strong></span>
+                            <span><i class="fas fa-chart-simple"></i> VOLUME: <strong id="volume">--</strong></span>
+                            <span><i class="fas fa-clock"></i> <strong id="last-update">--</strong></span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="metrics-grid">
+                    <div class="metric-card"><div class="label">OUVERTURE</div><div class="value" id="metric-open">--</div></div>
+                    <div class="metric-card"><div class="label">PRECEDENT</div><div class="value" id="metric-prev">--</div></div>
+                    <div class="metric-card"><div class="label">VAR 5J</div><div class="value" id="metric-5d">--</div></div>
+                    <div class="metric-card"><div class="label">VAR 1M</div><div class="value" id="metric-1m">--</div></div>
+                </div>
+
+                <div class="card">
+                    <div class="card-title">
+                        <span><i class="fas fa-chart-bar"></i> CHANDELIERS JAPONAIS</span>
+                        <span class="badge-count" id="chart-badge">LIVE</span>
+                    </div>
+                    <div class="chart-controls">
+                        <div class="group">
+                            <span class="group-label">PERIODE</span>
+                            <button class="active" data-period="1d" onclick="changePeriod('1d')">1J</button>
+                            <button data-period="5d" onclick="changePeriod('5d')">5J</button>
+                            <button data-period="1mo" onclick="changePeriod('1mo')">1M</button>
+                            <button data-period="3mo" onclick="changePeriod('3mo')">3M</button>
+                            <button data-period="6mo" onclick="changePeriod('6mo')">6M</button>
+                            <button data-period="1y" onclick="changePeriod('1y')">1A</button>
+                        </div>
+                    </div>
+                    <div id="chart-container">
+                        <canvas id="candleChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <div>
+                <div class="card">
+                    <div class="card-title"><span><i class="fas fa-search"></i> RECHERCHE</span></div>
+                    <div class="input-group">
+                        <input type="text" id="symbol-input" placeholder="BTC-USD" value="BTC-USD">
+                        <button class="btn btn-primary" onclick="fetchTradingData()"><i class="fas fa-arrow-right"></i></button>
+                    </div>
+                    <div class="quick-buttons">
+                        <button class="btn btn-sm btn-btc" onclick="quickSelect('BTC-USD')">&#8383; BTC</button>
+                        <button class="btn btn-sm" onclick="quickSelect('ETH-USD')">ETH</button>
+                        <button class="btn btn-sm" onclick="quickSelect('SOL-USD')">SOL</button>
+                        <button class="btn btn-sm" onclick="quickSelect('ADA-USD')">ADA</button>
+                        <button class="btn btn-sm" onclick="quickSelect('DOGE-USD')">DOGE</button>
+                        <button class="btn btn-sm" onclick="quickSelect('XRP-USD')">XRP</button>
+                        <button class="btn btn-sm" onclick="quickSelect('BNB-USD')">BNB</button>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-title"><span><i class="fas fa-calculator"></i> INDICATEURS TECHNIQUES</span></div>
+                    <div class="indicators-grid">
+                        <div class="ind-section-title">MOMENTUM</div>
+                        <div class="indicator-box"><div class="name">RSI (14)</div><div class="value" id="ind-rsi">--</div></div>
+                        <div class="indicator-box"><div class="name">MACD</div><div class="value" id="ind-macd">--</div></div>
+                        <div class="indicator-box"><div class="name">MACD SIGNAL</div><div class="value" id="ind-macd-signal">--</div></div>
+                        <div class="ind-section-title">MOYENNES MOBILES</div>
+                        <div class="indicator-box"><div class="name">SMA 20</div><div class="value" id="ind-sma20">--</div></div>
+                        <div class="indicator-box"><div class="name">SMA 50</div><div class="value" id="ind-sma50">--</div></div>
+                        <div class="indicator-box"><div class="name">VOLATILITE</div><div class="value" id="ind-volatility">--</div></div>
+                        <div class="indicator-box"><div class="name">SUPPORT</div><div class="value" id="ind-support">--</div></div>
+                        <div class="indicator-box"><div class="name">RESISTANCE</div><div class="value" id="ind-resistance">--</div></div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-title"><span><i class="fas fa-bullhorn"></i> SIGNAUX</span></div>
+                    <div id="signals-container">
+                        <div class="signal-box signal-warning"><span class="signal-icon">&#9203;</span><div class="signal-content"><div class="signal-title">ANALYSE EN COURS</div><div class="signal-text">VEUILLEZ PATIENTER...</div></div></div>
+                    </div>
+                    <div id="recommendation-container">
+                        <div class="recommendation-box recommendation-neutral">
+                            <div class="rec-title">NEUTRE</div>
+                            <div class="rec-confidence">CONFIANCE: --</div>
+                            <div style="margin-top:6px;display:flex;gap:12px;justify-content:center;font-size:0.8rem;">
+                                <span style="color:#ff3333;">STOP-LOSS: --</span>
+                                <span style="color:#33ff33;">TAKE-PROFIT: --</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-title"><span><i class="fas fa-star"></i> WATCHLIST</span><button class="btn btn-sm" onclick="refreshWatchlist()"><i class="fas fa-sync"></i></button></div>
+                    <div id="watchlist-container"><div class="spinner"></div></div>
+                </div>
+
+                <div class="card">
+                    <div class="card-title"><span><i class="fas fa-robot"></i> PREDICTIONS (5J)</span></div>
+                    <div class="prediction-grid">
+                        <div class="prediction-item"><div class="day">J+1</div><div class="price" id="pred-1">--</div><div class="change-pred" id="pred-change-1"></div></div>
+                        <div class="prediction-item"><div class="day">J+2</div><div class="price" id="pred-2">--</div><div class="change-pred" id="pred-change-2"></div></div>
+                        <div class="prediction-item"><div class="day">J+3</div><div class="price" id="pred-3">--</div><div class="change-pred" id="pred-change-3"></div></div>
+                        <div class="prediction-item"><div class="day">J+4</div><div class="price" id="pred-4">--</div><div class="change-pred" id="pred-change-4"></div></div>
+                        <div class="prediction-item"><div class="day">J+5</div><div class="price" id="pred-5">--</div><div class="change-pred" id="pred-change-5"></div></div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-title"><span><i class="fas fa-trophy"></i> TOP PERFORMERS</span></div>
+                    <div id="top-performers"><div class="spinner"></div></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="footer">
+            <div>CRYPTO TRADER v1.0 &#8226; 24/7 &#8226; <span class="crypto-footer">&#8383; BITCOIN / ETHEREUM / ALTCOINS</span> &#8226; ANALYSE TECHNIQUE</div>
+            <div class="links">
+                <a href="/"><i class="fas fa-home"></i> ACCUEIL</a>
+                <a href="#" onclick="location.reload()"><i class="fas fa-sync"></i> RAFRAICHIR</a>
+            </div>
+        </div>
+    </div>
+
+<script>
+    /* ================================================================
+       CONFIGURATION
+       ================================================================ */
+    var API_BASE = 'http://localhost:5002/api';
+    var REFRESH_INTERVAL = 30000;
+    var currentSymbol = 'BTC-USD';
+    var currentPeriod = '1d';
+    var chart = null;
+
+    /* ================================================================
+       API CALLS
+       ================================================================ */
+    function apiCall(ep) {
+        return fetch(API_BASE + ep)
+            .then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+            .catch(function(e) { console.error('API Error:', e); return null; });
+    }
+
+    /* ================================================================
+       FORMATAGE
+       ================================================================ */
+    function formatPrice(p, c) {
+        if (p == null || isNaN(p)) return '--';
+        var s = { USD: '$', EUR: '\u20AC' };
+        if (p < 0.01) return (s[c] || '$') + p.toFixed(6);
+        if (p < 1) return (s[c] || '$') + p.toFixed(4);
+        return (s[c] || '$') + parseFloat(p).toFixed(2);
+    }
+    function formatVolume(v) {
+        if (v == null || isNaN(v)) return '--';
+        if (v >= 1e9) return (v / 1e9).toFixed(1) + 'B';
+        if (v >= 1e6) return (v / 1e6).toFixed(1) + 'M';
+        if (v >= 1e3) return (v / 1e3).toFixed(1) + 'K';
+        return v.toString();
+    }
+    function fmtVal(v, d) { return v != null && !isNaN(v) ? v.toFixed(d || 2) : '--'; }
+
+    /* ================================================================
+       CHART - LIGNE SIMPLE (FONCTIONNE A COUP SUR)
+       ================================================================ */
+    function initChart() {
+        var ctx = document.getElementById('candleChart').getContext('2d');
+
+        chart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: [],
+                datasets: [{
+                    label: 'Prix',
+                    data: [],
+                    borderColor: '#33ff33',
+                    backgroundColor: 'rgba(51,255,51,0.1)',
+                    borderWidth: 2,
+                    fill: true,
+                    tension: 0.4,
+                    pointRadius: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return '$' + context.parsed.y.toFixed(2);
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: { color: 'rgba(51,255,51,0.05)' },
+                        ticks: {
+                            color: '#33ff33',
+                            maxTicksLimit: 15,
+                            font: { size: 9, family: 'VT323' }
+                        }
+                    },
+                    y: {
+                        grid: { color: 'rgba(51,255,51,0.05)' },
+                        ticks: {
+                            color: '#33ff33',
+                            font: { size: 10, family: 'VT323' },
+                            callback: function(value) { return '$' + value.toFixed(0); }
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    function updateChart(data) {
+        if (!chart) return;
+
+        var pd = data.data['1d'] || data.data['1d'];
+        if (!pd) return;
+
+        var candles = pd.candles || [];
+        if (candles.length === 0) return;
+
+        // Prendre un échantillon
+        var step = Math.max(1, Math.floor(candles.length / 60));
+        var sample = [];
+        for (var i = 0; i < candles.length; i += step) {
+            sample.push(candles[i]);
+        }
+        if (sample[sample.length - 1] !== candles[candles.length - 1]) {
+            sample.push(candles[candles.length - 1]);
+        }
+
+        var labels = sample.map(function(c) {
+            return new Date(c.time * 1000).toLocaleTimeString();
+        });
+        var prices = sample.map(function(c) { return c.close; });
+
+        chart.data.labels = labels;
+        chart.data.datasets[0].data = prices;
+        chart.update();
+    }
+
+    /* ================================================================
+       FETCH PRINCIPAL
+       ================================================================ */
+    function fetchTradingData() {
+        var sym = document.getElementById('symbol-input').value.trim() || 'BTC-USD';
+        return apiCall('/trading/' + encodeURIComponent(sym)).then(function(data) {
+            if (data && !data.error) {
+                currentSymbol = sym;
+                updateDisplay(data);
+                updateChart(data);
+                fetchAdvancedInsights(sym);
+                document.getElementById('status-led').className = 'led led-on';
+                document.getElementById('status-text').textContent = 'CONNECTE';
+            } else {
+                document.getElementById('status-led').className = 'led led-off';
+                document.getElementById('status-text').textContent = 'ERREUR';
+            }
+        });
+    }
+
+    /* ================================================================
+       UPDATE DISPLAY
+       ================================================================ */
+    function updateDisplay(data) {
+        var pd = data.data['1d'] || data.data['1d'];
+        if (!pd) return;
+        var st = pd.stats, cur = data.currency || 'USD', candles = pd.candles || [];
+        document.getElementById('current-symbol').textContent = data.symbol;
+        document.getElementById('current-exchange').textContent = data.exchange || 'CRYPTO';
+        document.getElementById('current-price').textContent = formatPrice(st.current_price, cur);
+        var s = st.change >= 0 ? '+' : '', cls = st.change >= 0 ? 'change-positive' : 'change-negative';
+        document.getElementById('current-change').innerHTML = '<span class="' + cls + '">' + s + st.change_percent.toFixed(2) + '% (' + s + st.change.toFixed(2) + ')</span>';
+        document.getElementById('day-high').textContent = formatPrice(st.high, cur);
+        document.getElementById('day-low').textContent = formatPrice(st.low, cur);
+        document.getElementById('volume').textContent = formatVolume(st.volume);
+        document.getElementById('last-update').textContent = new Date().toLocaleTimeString('fr-FR');
+        document.getElementById('metric-open').textContent = formatPrice(candles[0] ? candles[0].open : 0, cur);
+        document.getElementById('metric-prev').textContent = formatPrice(st.current_price - st.change, cur);
+        if (candles.length > 5) {
+            var c5 = ((candles[candles.length - 1].close - candles[candles.length - 6].close) / candles[candles.length - 6].close * 100);
+            document.getElementById('metric-5d').textContent = (c5 >= 0 ? '+' : '') + c5.toFixed(1) + '%';
+        }
+        if (candles.length > 20) {
+            var c1 = ((candles[candles.length - 1].close - candles[candles.length - 21].close) / candles[candles.length - 21].close * 100);
+            document.getElementById('metric-1m').textContent = (c1 >= 0 ? '+' : '') + c1.toFixed(1) + '%';
+        }
+    }
+
+    /* ================================================================
+       CHANGE PERIOD
+       ================================================================ */
+    function changePeriod(period) {
+        currentPeriod = period;
+        var btns = document.querySelectorAll('[data-period]');
+        for (var i = 0; i < btns.length; i++)
+            btns[i].classList.toggle('active', btns[i].getAttribute('data-period') === period);
+        fetchTradingData();
+    }
+
+    /* ================================================================
+       QUICK SELECT
+       ================================================================ */
+    function quickSelect(symbol) {
+        document.getElementById('symbol-input').value = symbol;
+        fetchTradingData();
+    }
+
+    /* ================================================================
+       ADVANCED INSIGHTS
+       ================================================================ */
+    function fetchAdvancedInsights(symbol) {
+        apiCall('/insights-advanced/' + encodeURIComponent(symbol)).then(function(data) {
+            if (!data || data.error) return;
+            updatePredictions(data);
+            if (data.volatility != null) {
+                document.getElementById('ind-volatility').textContent = fmtVal(data.volatility, 1) + '%';
+            }
+            if (data.supports && data.supports[0] != null) {
+                document.getElementById('ind-support').textContent = '$' + fmtVal(data.supports[0], 2);
+            }
+            if (data.resistances && data.resistances[0] != null) {
+                document.getElementById('ind-resistance').textContent = '$' + fmtVal(data.resistances[0], 2);
+            }
+            if (data.rsi != null) {
+                var rv = data.rsi;
+                var re = document.getElementById('ind-rsi');
+                re.textContent = fmtVal(rv, 1);
+                re.className = 'value ' + (rv > 70 ? 'bearish' : rv < 30 ? 'bullish' : 'neutral');
+            }
+            if (data.macd != null) {
+                var mv = data.macd;
+                var me = document.getElementById('ind-macd');
+                me.textContent = fmtVal(mv, 3);
+                me.className = 'value ' + (mv > 0 ? 'bullish' : mv < 0 ? 'bearish' : 'neutral');
+            }
+        });
+    }
+
+    function updatePredictions(data) {
+        var preds = data.predictions || [];
+        var cp = data.current_price || 0;
+        for (var i = 0; i < 5; i++) {
+            var el = document.getElementById('pred-' + (i + 1));
+            var ce = document.getElementById('pred-change-' + (i + 1));
+            if (i < preds.length) {
+                var p = preds[i], ch = ((p - cp) / cp * 100);
+                var cc = ch > 0 ? '#33ff33' : ch < 0 ? '#ff3333' : '#ffaa00';
+                el.textContent = '$' + p.toFixed(2); el.style.color = cc;
+                ce.textContent = (ch >= 0 ? '+' : '') + ch.toFixed(1) + '%'; ce.style.color = cc;
+            } else {
+                el.textContent = '--'; el.style.color = ''; ce.textContent = ''; ce.style.color = '';
+            }
+        }
+    }
+
+    /* ================================================================
+       WATCHLIST
+       ================================================================ */
+    function refreshWatchlist() {
+        var c = document.getElementById('watchlist-container');
+        c.innerHTML = '<div class="spinner"></div>';
+        apiCall('/watchlist').then(function(data) {
+            if (!data || data.error || !Array.isArray(data)) { c.innerHTML = '<div style="opacity:0.5;font-size:0.8rem;text-align:center;padding:10px;">INDISPONIBLE</div>'; return; }
+            var h = '<div class="watchlist-grid">';
+            for (var i = 0; i < data.length; i++) {
+                var it = data[i];
+                if (it.error) { h += '<div class="watchlist-item"><span class="symbol">' + it.symbol + '</span><span style="opacity:0.5;">ERREUR</span></div>'; continue; }
+                var s = (it.changePercent || 0) >= 0 ? '+' : '', cls = (it.changePercent || 0) >= 0 ? 'change-positive' : 'change-negative';
+                var btcClass = it.symbol === 'BTC-USD' ? 'btc-item' : '';
+                var icon = it.symbol === 'BTC-USD' ? ' &#8383;' : '';
+                h += '<div class="watchlist-item ' + btcClass + '" onclick="quickSelect(\'' + it.symbol.replace(/'/g, "\\'") + '\')"><span class="symbol">' + it.symbol + icon + '</span><span><span class="price">' + formatPrice(it.price, it.currency) + '</span> <span class="change-small ' + cls + '">' + s + (it.changePercent || 0).toFixed(1) + '%</span></span></div>';
+            }
+            h += '</div>'; c.innerHTML = h;
+        });
+    }
+
+    function refreshTopPerformers() {
+        var c = document.getElementById('top-performers');
+        c.innerHTML = '<div class="spinner"></div>';
+        apiCall('/top-performers').then(function(data) {
+            if (!data || data.error || !Array.isArray(data)) { c.innerHTML = '<div style="opacity:0.5;font-size:0.8rem;text-align:center;padding:10px;">INDISPONIBLE</div>'; return; }
+            var h = '';
+            for (var i = 0; i < data.length; i++) {
+                var it = data[i], s = it.changePercent >= 0 ? '+' : '', cls = it.changePercent >= 0 ? 'change-positive' : 'change-negative';
+                var star = i === 0 ? '&#128640; ' : '';
+                h += '<div class="watchlist-item" onclick="quickSelect(\'' + it.symbol.replace(/'/g, "\\'") + '\')"><span class="symbol">' + star + it.symbol + '</span><span><span class="price">' + formatPrice(it.price, it.currency) + '</span> <span class="change-small ' + cls + '">' + s + it.changePercent.toFixed(1) + '%</span></span></div>';
+            }
+            c.innerHTML = h;
+        });
+    }
+
+    function updateTimezones() {
+        var now = new Date();
+        document.getElementById('ny-time').textContent = now.toLocaleTimeString('fr-FR', { timeZone: 'America/New_York' });
+        document.getElementById('paris-time').textContent = now.toLocaleTimeString('fr-FR', { timeZone: 'Europe/Paris' });
+        document.getElementById('london-time').textContent = now.toLocaleTimeString('fr-FR', { timeZone: 'Europe/London' });
+        document.getElementById('tokyo-time').textContent = now.toLocaleTimeString('fr-FR', { timeZone: 'Asia/Tokyo' });
+    }
+
+    /* ================================================================
+       INIT
+       ================================================================ */
+    document.addEventListener('DOMContentLoaded', function() {
+        if (typeof Chart === 'undefined') {
+            document.getElementById('status-led').className = 'led led-off';
+            document.getElementById('status-text').textContent = 'LIB NON CHARGEE';
+            return;
+        }
+        initChart();
+        fetchTradingData();
+        refreshWatchlist();
+        refreshTopPerformers();
+        updateTimezones();
+        setInterval(updateTimezones, 1000);
+        setInterval(function() { fetchTradingData(); }, REFRESH_INTERVAL);
+        setInterval(function() { refreshWatchlist(); refreshTopPerformers(); }, REFRESH_INTERVAL * 3);
+    });
+
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter' && document.activeElement && document.activeElement.id === 'symbol-input') fetchTradingData();
+    });
+</script>
+</body>
+</html>
