@@ -135,4 +135,8 @@ Endpoint	Description
     Cache : Mémoire interne (5 minutes)
 
 
+<img width="1380" height="1465" alt="Screenshot 2026-06-24 at 21-25-31 CRYPTO TRADER - Minitel Style" src="https://github.com/user-attachments/assets/2ef00f17-915a-4fa2-a997-f6228e171f09" />
+
+
+
 By Gleaphe 2026 
