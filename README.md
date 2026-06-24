@@ -44,3 +44,14 @@
 ```bash
 git clone https://github.com/votre-username/crypto-trader-minitel.git
 cd crypto-trader-minitel
+
+
+
+# Créer un environnement virtuel
+
+   python3 -m venv venv
+   source venv/bin/activate  # Linux/Mac
+
+# ou
+
+   venv\Scripts\activate     # Windows
