@@ -30,4 +30,4 @@ echo "📄 Copie de Chart.js..."
 cp node_modules/chart.js/dist/chart.umd.min.js static/js/
 
 echo "✅ Installation terminée !"
-echo "🌐 Lancez l'application avec : python3 serv_crypto.py"
+echo "🌐 Lancez l'application avec : python3 serv.py"
