@@ -70,7 +70,7 @@
  
 ### 6. Lancer l'application
 
-    python3 serv_crypto.py
+    python3 serv.py
 
 ### 7. Ouvrir dans le navigateur
 
@@ -98,7 +98,7 @@ ou
 
 # Lancer
     
-    python3 serv_crypto.py
+    python3 serv.py
 
 
 📊 API Endpoints
