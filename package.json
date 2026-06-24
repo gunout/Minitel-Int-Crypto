@@ -1,0 +1,26 @@
+{
+  "name": "crypto-trader-minitel",
+  "version": "1.0.0",
+  "description": "CRYPTO TRADER - Minitel Style avec chandeliers japonais",
+  "main": "serv_crypto.py",
+  "scripts": {
+    "start": "python3 serv_crypto.py",
+    "dev": "python3 serv_crypto.py",
+    "install-front": "npm install chart.js"
+  },
+  "dependencies": {
+    "chart.js": "^4.4.0"
+  },
+  "devDependencies": {},
+  "keywords": [
+    "crypto",
+    "trader",
+    "minitel",
+    "chart.js",
+    "flask",
+    "bitcoin",
+    "ethereum"
+  ],
+  "author": "Gleaphe",
+  "license": "MIT"
+}
