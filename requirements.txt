@@ -1,0 +1,19 @@
+# Framework Web
+Flask==2.3.3
+flask-cors==4.0.0
+
+# Données financières et API
+requests==2.31.0
+
+# Manipulation de données
+pandas==2.1.0
+numpy==1.24.3
+
+# Machine Learning pour les prédictions
+scikit-learn==1.3.0
+
+# Fuseaux horaires
+pytz==2023.3
+
+# Utilitaires
+python-dotenv==1.0.0
